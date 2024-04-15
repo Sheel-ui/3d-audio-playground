@@ -24,6 +24,9 @@ BLACK = (0,0,0)
 BLUE = (50, 150, 255)
 NAVY = (45,135,220)
 BORDER = (80,80,80)
+LIGHT_BORDER = (130,130,130)
+DELETE_BORDER = BORDER
+INPUT_BORDER = BORDER
 RED = (250,50,5)
 
 
@@ -118,13 +121,17 @@ while running:
             # submit input
             if input_rect.collidepoint(event.pos):
                 input_active = True
+                INPUT_BORDER = LIGHT_BORDER
             else:
                 input_active = False
+                INPUT_BORDER = BORDER
             # delete input
             if delete_input.collidepoint(event.pos):
                 delete_active = True
+                DELETE_BORDER = LIGHT_BORDER
             else:
                 delete_active = False
+                DELETE_BORDER = BORDER
             # submit button
             if submit_button_rect.collidepoint(event.pos):
                 temp = input_text.strip()
@@ -206,7 +213,7 @@ while running:
     pygame.draw.rect(screen, GRAY, (0, 0, navbar_width, HEIGHT))
 
     # input form
-    pygame.draw.rect(screen, BORDER, input_rect, 2,border_radius=rect_radius)
+    pygame.draw.rect(screen, INPUT_BORDER, input_rect, 2,border_radius=rect_radius)
     text_surface = font.render(input_text, True, WHITE)
     screen.blit(text_surface, (input_rect.x + 5, input_rect.y + 5))
 
@@ -219,7 +226,7 @@ while running:
     pygame.draw.rect(screen, BORDER, partition)
     
     # delete form
-    pygame.draw.rect(screen, BORDER, delete_input, 2,border_radius=rect_radius)
+    pygame.draw.rect(screen, DELETE_BORDER, delete_input, 2,border_radius=rect_radius)
     text_surface = font.render(delete_text, True, WHITE)
     screen.blit(text_surface, (delete_input.x + 5, delete_input.y + 5))
 
