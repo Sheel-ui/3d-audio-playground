@@ -1,8 +1,7 @@
 import pygame
 import sys
 import random
-import threading
-import wave
+from sound import play_wav_thread
 from components import Button,Input
 
 pygame.init()
@@ -48,26 +47,6 @@ threads = {}
 
 # UI parameters
 partition = pygame.Rect(0, 300, 200, 2)
-
-# Play wav file on loop
-def play_wav(file_path, stop_event):
-    wf = wave.open(file_path, 'rb')
-    chunk = 1024
-
-    stream = pygame.mixer.Sound(file=file_path)
-    stream.play(-1)                                 # plat on loop
-
-    while not stop_event.is_set():
-        pygame.time.delay(100)  # A short delay to prevent busy waiting
-
-    stream.stop()
-
-# Play on thread
-def play_wav_thread(file_path):
-    stop_event = threading.Event()
-    thread = threading.Thread(target=play_wav, args=(file_path, stop_event))
-    thread.start()
-    return thread, stop_event
 
 # method similar to collide points
 def is_inside_rect(x, y, rect):
