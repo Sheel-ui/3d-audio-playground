@@ -40,6 +40,9 @@ player_speed = 3
 animation_delay = 5
 animation_counter = 0
 character_index = 0
+shadow_radius = 200
+shadow_color = (255, 255, 255, 30)
+shadow = pygame.Surface((shadow_radius * 2, shadow_radius * 2), pygame.SRCALPHA)
 
 # Dictionary of speakers and wav threads added added
 speakers = {}
@@ -127,13 +130,13 @@ while running:
     else:
         moving_left = False
     if keys[pygame.K_RIGHT]:
-        player_x = min(WIDTH - character_size, player_x + player_speed)
+        player_x = min(WIDTH - character_size//2, player_x + player_speed)
         animation_counter += 1
     if keys[pygame.K_UP]:
         player_y = max(0, player_y - player_speed)
         animation_counter += 1
     if keys[pygame.K_DOWN]:
-        player_y = min(HEIGHT - character_size, player_y + player_speed)
+        player_y = min(HEIGHT - character_size//2, player_y + player_speed)
         animation_counter += 1
 
     # change image when counter exceeds delay
@@ -143,30 +146,29 @@ while running:
 
     # background image and navbar
     screen.blit(background_image, (0, 0))
-    pygame.draw.rect(screen, GRAY, (0, 0, NAVBAR_WIDTH, HEIGHT))
-
-    # partition
-    pygame.draw.rect(screen, BORDER, partition)
     
-    submit_button.draw(screen)
-    delete_button.draw(screen)
-    submit_input.draw(screen)
-    delete_input.draw(screen)
-    
-    delete_button.hover()
-    submit_button.hover()
-    
-
     # character render
     character_image = character_images[character_index]
     if moving_left:
         character_image = pygame.transform.flip(character_image, True, False)
     screen.blit(character_image, (player_x, player_y))
 
+    pygame.draw.circle(shadow, shadow_color, (shadow_radius, shadow_radius), shadow_radius)
+    screen.blit(shadow, (player_x - shadow_radius + character_size//4, player_y - shadow_radius+character_size//2))
+    
     # speaker render
     for speaker in speakers.values():
         screen.blit(speaker_image, (speaker[0], speaker[1]))
-        
+    
+    pygame.draw.rect(screen, GRAY, (0, 0, NAVBAR_WIDTH, HEIGHT))
+    submit_button.draw(screen)
+    delete_button.draw(screen)
+    submit_input.draw(screen)
+    delete_input.draw(screen)
+    pygame.draw.rect(screen, BORDER, partition)
+    delete_button.hover()
+    submit_button.hover()
+    
     pygame.display.update()
 
     pygame.time.Clock().tick(60)
