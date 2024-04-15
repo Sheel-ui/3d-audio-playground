@@ -28,7 +28,71 @@ LIGHT_BORDER = (130,130,130)
 DELETE_BORDER = BORDER
 INPUT_BORDER = BORDER
 RED = (250,50,5)
+MAROON = (230,30,0)
+FONT = pygame.font.Font(None,32)
+RADIUS = 10
+NAVBAR_WIDTH = 200
 
+class Button:
+    def __init__(self,x,y,width,height,radius,button_color,hover_color,text,text_color,action,target):
+        self.rect = pygame.Rect(x,y,width,height)
+        self.text = text
+        self.action = action
+        self.text_color = text_color
+        self.color = button_color
+        self.button_color = button_color
+        self.hover_color = hover_color
+        self.radius = radius
+        self.target = target
+        print(self.target)
+        
+    def draw(self,surface):
+        pygame.draw.rect(surface,self.color,self.rect,border_radius=self.radius)
+        text_surface = FONT.render(self.text,True,self.text_color)
+        text_rect = text_surface.get_rect(center=self.rect.center)
+        surface.blit(text_surface, text_rect)
+        
+    def handle_event(self, event):
+        if self.target and event.type == pygame.MOUSEBUTTONDOWN:
+            if self.rect.collidepoint(event.pos):
+                self.action(self.target.text)
+                self.target.text = ""
+                
+    def hover(self):
+        if self.rect.collidepoint(pygame.mouse.get_pos()):
+            self.color = self.hover_color
+        else:
+            self.color = self.button_color
+
+class Input:
+    def __init__(self,x,y,width,height,radius,inactive_color,active_color,text,text_color):
+        self.rect = pygame.Rect(x,y,width,height)
+        self.text = text
+        self.color = inactive_color
+        self.radius = radius
+        self.text_color = text_color
+        self.inactive_color = inactive_color
+        self.active_color = active_color
+    
+    def draw(self,surface):
+        pygame.draw.rect(surface,self.color,self.rect, 2,border_radius=self.radius)
+        text_surface = FONT.render(self.text,True,self.text_color)
+        text_rect = text_surface.get_rect(left=self.rect.left + 10, centery=self.rect.centery)
+        surface.blit(text_surface, text_rect)
+                
+    def read(self,event):
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if self.rect.collidepoint(pygame.mouse.get_pos()):
+                self.color = self.active_color
+            else:
+                self.color = self.inactive_color
+                
+        if event.type == pygame.KEYDOWN:
+            if self.color == self.active_color:
+                if event.key == pygame.K_BACKSPACE:
+                    self.text = self.text[:-1]
+                else:
+                    self.text += event.unicode
 
 # Character size, position, speed, index for selecting image to render
 character_size = 50
@@ -43,27 +107,8 @@ character_index = 0
 speakers = {}
 threads = {}
 
-# Form for input field and Submit button
-font = pygame.font.Font(None, 32)
-input_text = ''
-input_rect = pygame.Rect(10, 20, 180, 30)
-input_active = False                                  # form is inactive when not selected
-submit_button_rect = pygame.Rect(55, 70, 90, 30)
-rect_radius = 10 
-submit_button_color = BLUE
-
-
-# Partition
+# UI parameters
 partition = pygame.Rect(0, 300, 200, 2)
-delete_text = ''
-delete_active = False                                # form is inactive when not selected
-delete_input = pygame.Rect(10,320,180,30)
-delete_rect = pygame.Rect(55, 370, 90, 30)
-delete_button_color = RED
-
-# Control panel on the left
-navbar_width = 200
-
 
 # Play wav file on loop
 def play_wav(file_path, stop_event):
@@ -90,96 +135,64 @@ def is_inside_rect(x, y, rect):
     return rect[0] <= x <= rect[0] + rect[2] and rect[1] <= y <= rect[1] + rect[3]
 
 def create_thread(filename):
-    wav_file = "sample/" + filename  # Path to your wav file
-    play_thread, stop_event = play_wav_thread(wav_file)
-    threads[filename] = (play_thread, stop_event)
+    temp = filename.strip()
+    if temp:
+        speaker_x = random.randint(NAVBAR_WIDTH, WIDTH - speaker_image.get_width())
+        speaker_y = random.randint(0, HEIGHT - speaker_image.get_height())
+        speakers[temp] = (speaker_x, speaker_y)
+        wav_file = "sample/" + filename  # Path to your wav file
+        play_thread, stop_event = play_wav_thread(wav_file)
+        threads[filename] = (play_thread, stop_event)
 
 # Function to terminate the earliest created thread
 def terminate_thread(filename):
-    if threads:
-        thread, stop_event = threads[filename]
-        del threads[filename]
+    temp = filename.strip()
+    if temp and temp in speakers:
+        del speakers[temp]
+        thread, stop_event = threads[temp]
+        del threads[temp]
         stop_event.set()  # Set the event to signal thread termination
         thread.join()  # Wait for the thread to finish
 
+submit_input = Input(10,20,180,30,10,BORDER,LIGHT_BORDER,"",WHITE)
+submit_button = Button(55,70,90,30,10,BLUE,NAVY,"Submit",WHITE,create_thread,submit_input)
 
-# will remove this
-font = pygame.font.Font(None, 30)
-text_button = font.render("Add Speaker", True, WHITE)
-
+delete_input = Input(10,320,180,30,10,BORDER,LIGHT_BORDER,"",WHITE)
+delete_button = Button(55,370,90,30,10,RED,MAROON,"Delete",WHITE,terminate_thread,delete_input)
 # game is running, dragging set to true when mouse button is down and selected a speaker
 running = True
 dragging = False
 while running:
 
     for event in pygame.event.get():
+        submit_button.handle_event(event)
+        delete_button.handle_event(event)
+        submit_input.read(event)
+        delete_input.read(event)
         if event.type == pygame.QUIT:
             running = False
         # check for button click: submit/delete input; submit/delete button; speaker
         elif event.type == pygame.MOUSEBUTTONDOWN:
             mouse_x, mouse_y = pygame.mouse.get_pos()
-            # submit input
-            if input_rect.collidepoint(event.pos):
-                input_active = True
-                INPUT_BORDER = LIGHT_BORDER
-            else:
-                input_active = False
-                INPUT_BORDER = BORDER
-            # delete input
-            if delete_input.collidepoint(event.pos):
-                delete_active = True
-                DELETE_BORDER = LIGHT_BORDER
-            else:
-                delete_active = False
-                DELETE_BORDER = BORDER
-            # submit button
-            if submit_button_rect.collidepoint(event.pos):
-                temp = input_text.strip()
-                if temp:
-                    input_text = ''
-                    speaker_x = random.randint(navbar_width, WIDTH - speaker_image.get_width())
-                    speaker_y = random.randint(0, HEIGHT - speaker_image.get_height())
-                    speakers[temp] = (speaker_x, speaker_y)
-                    create_thread(temp)
-            # delete button
-            if delete_rect.collidepoint(event.pos):
-                temp = delete_text.strip()
-                if temp and temp in speakers:
-                    delete_text = ''
-                    del speakers[temp]
-                    terminate_thread(temp)
-            # individaul speaker
-            else:
-                for speaker in speakers.items():
-                    speaker_rect = pygame.Rect(speaker[1][0], speaker[1][1], speaker_image.get_width(), speaker_image.get_height())
-                    if is_inside_rect(mouse_x, mouse_y, speaker_rect):
-                        delete_text = speaker[0]
-                        dragging = True
-                        speaker_index = speaker[0]
-                        speaker_offset_x = mouse_x - speaker[1][0]
-                        speaker_offset_y = mouse_y - speaker[1][1]
-        # stop dtagging
+
+            for speaker in speakers.items():
+                speaker_rect = pygame.Rect(speaker[1][0], speaker[1][1], speaker_image.get_width(), speaker_image.get_height())
+                if is_inside_rect(mouse_x, mouse_y, speaker_rect):
+                    delete_button.target.text = speaker[0]
+                    dragging = True
+                    speaker_index = speaker[0]
+                    speaker_offset_x = mouse_x - speaker[1][0]
+                    speaker_offset_y = mouse_y - speaker[1][1]
+        # stop dragging
         elif event.type == pygame.MOUSEBUTTONUP:
             dragging = False
-        # text input
-        elif event.type == pygame.KEYDOWN:
-            if input_active:
-                if event.key == pygame.K_BACKSPACE:
-                    input_text = input_text[:-1]
-                else:
-                    input_text += event.unicode
-            if delete_active:
-                if event.key == pygame.K_BACKSPACE:
-                    delete_text = delete_text[:-1]
-                else:
-                    delete_text += event.unicode
     
     # update location if dragging
     if dragging:
         mouse_x, mouse_y = pygame.mouse.get_pos()
         speaker_x = mouse_x - speaker_offset_x
         speaker_y = mouse_y - speaker_offset_y
-        speaker_x = max(navbar_width, min(WIDTH - speaker_image.get_width(), speaker_x))
+        speaker_x = max(NAVBAR_WIDTH, min(WIDTH - speaker_image.get_width(), speaker_x))
         speaker_y = max(0, min(HEIGHT - speaker_image.get_height(), speaker_y))
         speakers[speaker_index] = (speaker_x, speaker_y)
 
@@ -188,7 +201,7 @@ while running:
 
     # set moving left to true and flip the image
     if keys[pygame.K_LEFT]:
-        player_x = max(navbar_width, player_x - player_speed)
+        player_x = max(NAVBAR_WIDTH, player_x - player_speed)
         moving_left = True
         animation_counter += 1
     else:
@@ -210,37 +223,19 @@ while running:
 
     # background image and navbar
     screen.blit(background_image, (0, 0))
-    pygame.draw.rect(screen, GRAY, (0, 0, navbar_width, HEIGHT))
+    pygame.draw.rect(screen, GRAY, (0, 0, NAVBAR_WIDTH, HEIGHT))
 
-    # input form
-    pygame.draw.rect(screen, INPUT_BORDER, input_rect, 2,border_radius=rect_radius)
-    text_surface = font.render(input_text, True, WHITE)
-    screen.blit(text_surface, (input_rect.x + 5, input_rect.y + 5))
-
-    # submit form
-    pygame.draw.rect(screen, submit_button_color, submit_button_rect, border_radius=rect_radius)
-    submit_text = font.render("Submit", True, WHITE)
-    screen.blit(submit_text, (submit_button_rect.x + 10, submit_button_rect.y + 5))
-    
     # partition
     pygame.draw.rect(screen, BORDER, partition)
     
-    # delete form
-    pygame.draw.rect(screen, DELETE_BORDER, delete_input, 2,border_radius=rect_radius)
-    text_surface = font.render(delete_text, True, WHITE)
-    screen.blit(text_surface, (delete_input.x + 5, delete_input.y + 5))
-
-    # delete button
-    pygame.draw.rect(screen, delete_button_color, delete_rect, border_radius=rect_radius)
-    submit_text = font.render("Delete", True, WHITE)
-    screen.blit(submit_text, (delete_rect.x + 10, delete_rect.y + 5))
+    submit_button.draw(screen)
+    delete_button.draw(screen)
+    submit_input.draw(screen)
+    delete_input.draw(screen)
     
-
-    # submit logic
-    if submit_button_rect.collidepoint(pygame.mouse.get_pos()):
-        submit_button_color = NAVY
-    else:
-        submit_button_color = BLUE
+    delete_button.hover()
+    submit_button.hover()
+    
 
     # character render
     character_image = character_images[character_index]
@@ -252,8 +247,6 @@ while running:
     for speaker in speakers.values():
         screen.blit(speaker_image, (speaker[0], speaker[1]))
         
-        
-
     pygame.display.update()
 
     pygame.time.Clock().tick(60)
