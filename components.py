@@ -1,3 +1,4 @@
+from pygame import gfxdraw
 import pygame
 import math
 
@@ -15,7 +16,7 @@ class Button:
         
     def draw(self,surface):
         pygame.draw.rect(surface,self.color,self.rect,border_radius=self.radius)
-        text_surface = pygame.font.Font(None,32).render(self.text,True,self.text_color)
+        text_surface = pygame.font.Font(None,30).render(self.text,True,self.text_color)
         text_rect = text_surface.get_rect(center=self.rect.center)
         surface.blit(text_surface, text_rect)
         
@@ -43,7 +44,7 @@ class Input:
     
     def draw(self,surface):
         pygame.draw.rect(surface,self.color,self.rect, 2,border_radius=self.radius)
-        text_surface = pygame.font.Font(None,32).render(self.text,True,self.text_color)
+        text_surface = pygame.font.Font(None,24).render(self.text,True,self.text_color)
         text_rect = text_surface.get_rect(left=self.rect.left + 10, centery=self.rect.centery)
         surface.blit(text_surface, text_rect)
                 
@@ -76,13 +77,12 @@ class Circle:
         self.active_color = active_color
         self.inactive_color = inactive_color
     
-    def draw(self,surface):
-        text_surface = pygame.font.Font(None,32).render(self.text,True,self.text_color)
-        pygame.draw.circle(self.circle,self.color,(self.radius,self.radius),self.radius)
-        text_rect = text_surface.get_rect(left=self.x + 3)
-        surface.blit(self.circle,(self.x,self.y))
-        text_rect.top = self.y + 6  # Align the top of the text_rect with the top of the circle
-        text_rect.left = self.x + 8  # Offset the text to the right slightly from the circle
+    def draw(self, surface):
+        text_surface = pygame.font.Font(None, 32).render(self.text, True, self.text_color)
+        pygame.draw.circle(surface, self.color, (self.x + self.radius, self.y + self.radius), self.radius)
+        pygame.gfxdraw.aacircle(surface, self.x + self.radius, self.y + self.radius, self.radius, self.color)
+        pygame.gfxdraw.filled_circle(surface, self.x + self.radius, self.y + self.radius, self.radius, self.color)
+        text_rect = text_surface.get_rect(left=self.x + 9, top=self.y + 6)
         surface.blit(text_surface, text_rect)
 
     def click(self, event, selectedHrtf):
@@ -111,3 +111,17 @@ class Plot:
 
     def draw(self,surface):
         pygame.draw.rect(surface,self.color,self.rect)
+
+class Text:
+    def __init__(self, texts, positions, font_sizes, colors):
+        self.texts = texts
+        self.positions = positions
+        self.font_sizes = font_sizes
+        self.colors = colors
+        self.fonts = [pygame.font.Font(None, size) for size in font_sizes]
+
+    def draw(self, surface):
+        for text, pos, font, color in zip(self.texts, self.positions, self.fonts, self.colors):
+            text_surface = font.render(text, True, color)
+            text_rect = text_surface.get_rect(left=pos[0], top=pos[1])
+            surface.blit(text_surface, text_rect)
