@@ -271,10 +271,11 @@ while running:
             # var.speaker_var[speaker_index].elevation = (505-speakers[speaker_index][2])/120*140-50
             # var.speaker_var[speaker_index].dist = (600-abs(player_x-speaker_x))/600*(var.speaker_var[speaker_index].maxR-minR) + minR
                     
-    if speaker_index!="":
-        var.speaker_var[speaker_index].paz = -var.speaker_var[speaker_index].azimuth
-        var.speaker_var[speaker_index].pel = var.speaker_var[speaker_index].elevation
-        var.speaker_var[speaker_index].pr = var.speaker_var[speaker_index].dist
+    for speaker in speakers.items():
+        s = speaker[0]
+        var.speaker_var[s].paz = -var.speaker_var[s].azimuth
+        var.speaker_var[s].pel = var.speaker_var[s].elevation
+        var.speaker_var[s].pr = var.speaker_var[s].dist
 
     # change image when counter exceeds delay
     if animation_counter >= animation_delay:

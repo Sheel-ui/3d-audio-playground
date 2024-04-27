@@ -5,8 +5,7 @@ import numpy as np
 def setupHRTF(selectedhrtf):
     folderPath = 'hrtf/'
     fileNames = {"1":'HRIR_L2354',"2":'HRIR_L2702', "3": 'ARI_NH2',"4":'ARI_NH104' }
-    
-    print(fileNames[selectedhrtf])
+
     sofaFiles = [SOFAFile(folderPath+fileNames[selectedhrtf]+'.sofa','r')]
     sourcePositions = np.concatenate([sofaFile.getVariableValue('SourcePosition')
         for sofaFile in sofaFiles])
