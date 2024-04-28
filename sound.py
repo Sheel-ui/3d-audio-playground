@@ -14,22 +14,23 @@ power = 5
 
 # Play wav file on loop
 def play_wav(filename, stop_event):
-    overlapAmount = var.speaker_var[filename].FIRs.shape[2]-1
-    dataPrepend = np.zeros(overlapAmount)
+    overlapLength = var.speaker_var[filename].hrtfData.shape[2]-1
+    initialData = np.zeros(overlapLength)
     hrtfList = [[0,0]] 
-    currentTetraIndex = 0
+    tIndex = 0
 
     wf = wave.open('sample/'+filename, 'rb')
     
     def callback(in_data, frame_count, time_info, status):
-        nonlocal currentTetraIndex,hrtfList,dataPrepend
+        nonlocal initialData,tIndex,hrtfList
 
-        px = np.sin(var.speaker_var[filename].paz)*np.cos(var.speaker_var[filename].pel)*var.speaker_var[filename].pr
-        py = np.cos(var.speaker_var[filename].paz)*np.cos(var.speaker_var[filename].pel)*var.speaker_var[filename].pr
-        pz = np.sin(var.speaker_var[filename].pel)*var.speaker_var[filename].pr
+        xCoordinate = np.sin(var.speaker_var[filename].speakerAzimuth)*np.cos(var.speaker_var[filename].speakerElevation)*var.speaker_var[filename].speakerDistance
+        yCoordinate= np.cos(var.speaker_var[filename].speakerAzimuth)*np.cos(var.speaker_var[filename].speakerElevation)*var.speaker_var[filename].speakerDistance
+        zCoordinate = np.sin(var.speaker_var[filename].speakerElevation)*var.speaker_var[filename].speakerDistance
 
-        pp = np.array((px, py, pz))
+        coordinates= np.array((xCoordinate, yCoordinate, zCoordinate))
         distance = var.speaker_var[filename].distance
+        
         print
         if distance <= 0.15:
             intensity = power / (4 * math.pi * distance**2)*0.5
@@ -41,45 +42,45 @@ def play_wav(filename, stop_event):
 
         i = 0
         while True:
-            [g1, g2, g3] = (pp-var.speaker_var[filename].tetraCoords[currentTetraIndex,3])@var.speaker_var[filename].Tinv[currentTetraIndex]
-            g4 = 1-g1-g2-g3
-            gs = [g1, g2, g3, g4]
-            if all(g >= 0 for g in gs) or i>=20000:#len(tetraCoords):
+            [barycentricCoordinate1, barycentricCoordinate2, barycentricCoordinate3] = (coordinates-var.speaker_var[filename].tetraCoordinates[tIndex,3])@var.speaker_var[filename].tetrahedronInverse[tIndex]
+            barycentricCoordinate4 = 1-barycentricCoordinate1-barycentricCoordinate2-barycentricCoordinate3
+            barycentricCoordinates = [barycentricCoordinate1, barycentricCoordinate2, barycentricCoordinate3, barycentricCoordinate4]
+            if all(c >= 0 for c in barycentricCoordinates) or i>=20000:
                 break
-            currentTetraIndex = var.speaker_var[filename].tri.neighbors[currentTetraIndex][gs.index(min(gs))]
+            tIndex = var.speaker_var[filename].delaunayTriangulation.neighbors[tIndex][barycentricCoordinates.index(min(barycentricCoordinates))]
             i+=1
 
-        # and get the HRTF associated with pp
-        origPosIndex = var.speaker_var[filename].tri.simplices[currentTetraIndex]
-        hrtfB = var.speaker_var[filename].FIRs[origPosIndex[1],:,:]
-        hrtfA = var.speaker_var[filename].FIRs[origPosIndex[0],:,:]
-        hrtfC = var.speaker_var[filename].FIRs[origPosIndex[2],:,:]
-        hrtfD = var.speaker_var[filename].FIRs[origPosIndex[3],:,:]
+        # and get the HRTF associated with coordinates
+        positionIndex = var.speaker_var[filename].delaunayTriangulation.simplices[tIndex]
+        hrtfA = var.speaker_var[filename].hrtfData[positionIndex[0],:,:]
+        hrtfB = var.speaker_var[filename].hrtfData[positionIndex[1],:,:]
+        hrtfC = var.speaker_var[filename].hrtfData[positionIndex[2],:,:]
+        hrtfD = var.speaker_var[filename].hrtfData[positionIndex[3],:,:]
 
-        hrtf = hrtfA*gs[0]+hrtfB*gs[1]+hrtfC*gs[2]+hrtfD*gs[3]
+        hrtf = hrtfA*barycentricCoordinates[0]+hrtfB*barycentricCoordinates[1]+hrtfC*barycentricCoordinates[2]+hrtfD*barycentricCoordinates[3]
 
         if not np.array_equal(hrtfList[-1][0], hrtf[0]):
             hrtfList.append(hrtf)
 
         data = wf.readframes(frame_count)
         data_int = np.frombuffer(data, dtype=np.int16)
-        data_int = np.concatenate((dataPrepend, data_int))
-        dataPrepend = data_int[-overlapAmount:]
+        data_int = np.concatenate((initialData, data_int))
+        initialData = data_int[-overlapLength:]
 
-        binaural_left = scipy.signal.fftconvolve(data_int,hrtf[0])
-        binaural_right = scipy.signal.fftconvolve(data_int,hrtf[1])
+        left_audio_data = scipy.signal.fftconvolve(data_int,hrtf[0])
+        right_audio_data = scipy.signal.fftconvolve(data_int,hrtf[1])
 
-        if len(binaural_left)>0:
-            binaural_left = binaural_left[overlapAmount:-overlapAmount] *intensity
-            binaural_left = binaural_left.astype(np.int16)
+        if len(left_audio_data)>0:
+            left_audio_data = left_audio_data[overlapLength:-overlapLength] *intensity
+            left_audio_data = left_audio_data.astype(np.int16)
 
-            binaural_right = binaural_right[overlapAmount:-overlapAmount]*intensity
-            binaural_right = binaural_right.astype(np.int16)
+            right_audio_data = right_audio_data[overlapLength:-overlapLength]*intensity
+            right_audio_data = right_audio_data.astype(np.int16)
 
-        binaural = np.empty((binaural_left.size + binaural_right.size,), dtype=np.int16)
-        binaural[0::2] = binaural_left
-        binaural[1::2] = binaural_right
-        data = binaural[:CHUNK*2].tobytes()
+        audioData = np.empty((left_audio_data.size + right_audio_data.size,), dtype=np.int16)
+        audioData[0::2] = left_audio_data
+        audioData[1::2] = right_audio_data
+        data = audioData[:CHUNK*2].tobytes()
             
         return (data, pyaudio.paContinue)
 

@@ -6,6 +6,7 @@ from components import Button,Input, Circle, Plot, Text
 from variables import Variables
 from variables import speakerVar as var
 import numpy as np
+import os
 
 pygame.init()
 
@@ -81,7 +82,9 @@ def hrtfParams(speaker_x,speaker_y):
 def create_thread(filename):
     global elCursor_y, rCursor_x
     temp = filename.strip()
-    if temp:
+    path = 'sample/'+temp
+    if os.path.exists(path):
+        texts[6] = ""
         speaker_x = random.randint(NAVBAR_WIDTH, WIDTH - speaker_image.get_width())
         speaker_y = random.randint(0, HEIGHT - speaker_image.get_height())
         elCursor_y = 505
@@ -91,6 +94,8 @@ def create_thread(filename):
         var.speaker_var[filename]=Variables(distance,selectedHrtf)
         play_thread, stop_event = play_wav_thread(filename)
         threads[filename] = (play_thread, stop_event)
+    else:
+        texts[6] = "File Doesn't Exists"
 
 # Function to terminate the earliest created thread
 def terminate_thread(filename):
@@ -123,13 +128,15 @@ hrtfC = Circle(108,125,15,LIGHT_BORDER,BLUE,"3",WHITE)
 hrtfD = Circle(154,125,15,LIGHT_BORDER,BLUE,"4",WHITE)
 
 # Define texts, positions, font sizes, and colors
-texts = ["Add Source", "Select HRTF Profile", "Edit Source", "Elevation", "Radius","of the Head"]
-positions = [(15, 20), (15, 96), (15, 295), (8, 365), (90, 460), (78,472)]
-font_sizes = [24, 24, 24,18,18,18]
-colors = [TEXT, TEXT, TEXT,TEXT,TEXT,TEXT]
+texts = ["Add Source", "Select HRTF Profile", "Edit Source", "Elevation", "Radius","of the Head",""]
+positions = [(15, 20), (15, 96), (15, 295), (8, 365), (90, 460), (78,472),(15,80)]
+font_sizes = [24, 24, 24,18,18,18,16]
+colors = [TEXT, TEXT, TEXT,TEXT,TEXT,TEXT,RED]
 
 # Create a Text object
 text_object = Text(texts, positions, font_sizes, colors)
+
+
 
 # game is running, dragging set to true when mouse button is down and selected a speaker
 
@@ -273,8 +280,8 @@ while running:
                     
     for speaker in speakers.items():
         s = speaker[0]
-        var.speaker_var[s].paz = -var.speaker_var[s].azimuth
-        var.speaker_var[s].pel = var.speaker_var[s].elevation
+        var.speaker_var[s].speakerAzimuth= -var.speaker_var[s].azimuth
+        var.speaker_var[s].speakerElevation = var.speaker_var[s].elevation
         var.speaker_var[s].pr = var.speaker_var[s].dist
 
     # change image when counter exceeds delay

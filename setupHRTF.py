@@ -6,51 +6,51 @@ def setupHRTF(selectedhrtf):
     folderPath = 'hrtf/'
     fileNames = {"1":'HRIR_L2354',"2":'HRIR_L2702', "3": 'ARI_NH2',"4":'ARI_NH104' }
 
-    sofaFiles = [SOFAFile(folderPath+fileNames[selectedhrtf]+'.sofa','r')]
-    sourcePositions = np.concatenate([sofaFile.getVariableValue('SourcePosition')
-        for sofaFile in sofaFiles])
+    files = [SOFAFile(folderPath+fileNames[selectedhrtf]+'.sofa','r')]
+    positionArrays = np.concatenate([sofaFile.getVariableValue('SourcePosition')
+        for sofaFile in files])
 
-    sourcePositions[:,:2] *= np.pi/180
-    cullAmount = 3
-    meanFreePath = 4*max(sourcePositions[:,2])/np.sqrt(len(sourcePositions)/cullAmount)
-    sourcePositions[len(sourcePositions)//2:,2] += meanFreePath
+    cullingFactor = 3
+    positionArrays[:,:2] *= np.pi/180
+    averageFreePath = 4*max(positionArrays[:,2])/np.sqrt(len(positionArrays)/cullingFactor)
+    positionArrays[len(positionArrays)//2:,2] += averageFreePath
 
-    maxR = max(sourcePositions[:,2])-meanFreePath/2
+    maxR = max(positionArrays[:,2])-averageFreePath/2
 
-    FIRs = np.concatenate([sofaFile.getDataIR()
-        for sofaFile in sofaFiles])
+    hrtfData = np.concatenate([sofaFile.getDataIR()
+        for sofaFile in files])
 
-    az = np.array(sourcePositions[:,0])
-    el = np.array(sourcePositions[:,1])
-    r = np.array(sourcePositions[:,2]) 
+    azimuth = np.array(positionArrays[:,0])
+    elevation = np.array(positionArrays[:,1])
+    dist = np.array(positionArrays[:,2]) 
 
-    xs = np.sin(az)*np.cos(el)*r
-    ys = np.cos(az)*np.cos(el)*r
-    zs = np.sin(el)*r
+    xCoordinate = np.sin(azimuth)*np.cos(elevation)*dist
+    yCoordinate = np.cos(azimuth)*np.cos(elevation)*dist
+    zCoordinate = np.sin(elevation)*dist
 
-    points = np.array([xs, ys, zs]).transpose()    
-    sourcePositions = sourcePositions[::cullAmount]
-    FIRs = FIRs[::cullAmount]
-    points = points[::cullAmount]
-    tri = Delaunay(points, qhull_options="QJ Pp")
-    tetraCoords = points[tri.simplices]
+    points = np.array([xCoordinate, yCoordinate, zCoordinate]).transpose()   
+    hrtfData = hrtfData[::cullingFactor] 
+    points = points[::cullingFactor]
+    positionArrays = positionArrays[::cullingFactor]
+    delaunayTriangulation = Delaunay(points, qhull_options="QJ Pp")
+    tetraCoordinates = points[delaunayTriangulation.simplices]
 
-    T = np.transpose(np.array((tetraCoords[:,0]-tetraCoords[:,3],
-                tetraCoords[:,1]-tetraCoords[:,3],
-                tetraCoords[:,2]-tetraCoords[:,3])), (1,0,2))
+    transposeCoordinates = np.transpose(np.array((tetraCoordinates[:,0]-tetraCoordinates[:,3],
+                tetraCoordinates[:,1]-tetraCoordinates[:,3],
+                tetraCoordinates[:,2]-tetraCoordinates[:,3])), (1,0,2))
 
-    def fast_inverse(A):
-        identity = np.identity(A.shape[2], dtype=A.dtype)
-        Ainv = np.zeros_like(A)
+    def inverse(array):
+        identity = np.identity(array.shape[2], dtype=array.dtype)
+        arrayInverse = np.zeros_like(array)
         planarCount=0
-        for i in range(A.shape[0]):
+        for i in range(array.shape[0]):
             try:
-                Ainv[i] = np.linalg.solve(A[i], identity)
+                arrayInverse[i] = np.linalg.solve(array[i], identity)
             except np.linalg.LinAlgError:
                 planarCount += 1
-        return Ainv
+        return arrayInverse
 
-    Tinv = fast_inverse(T)
-    return(tetraCoords, Tinv, tri, FIRs, maxR)
+    tetrahedronInverse = inverse(transposeCoordinates)
+    return(tetraCoordinates, tetrahedronInverse, delaunayTriangulation, hrtfData, maxR)
 
 
