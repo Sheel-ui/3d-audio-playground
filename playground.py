@@ -63,10 +63,12 @@ threads = {}
 # UI parameters
 partition = pygame.Rect(0, 275, 200, 2)
 minR = 0.075
+
 # method similar to collide points
 def is_inside_rect(x, y, rect):
     return rect[0] <= x <= rect[0] + rect[2] and rect[1] <= y <= rect[1] + rect[3]
 
+# Functions to find distance between speaker and character
 def getDistance(speaker_x,speaker_y):
         x1, y1 = speaker_x+speaker_image.get_width()//2,speaker_y+speaker_image.get_height()//2
         x2, y2 = player_x+character_size//2,player_y+character_size//2
@@ -79,17 +81,18 @@ def hrtfParams(speaker_x,speaker_y):
     distance = distance/200 + minR
     return distance
 
+# Function to create thread for given filename
 def create_thread(filename):
     global elCursor_y, rCursor_x
     temp = filename.strip()
     path = 'sample/'+temp
-    if os.path.exists(path):
+    if os.path.exists(path):  # Checks whether file exists in directory or not
         texts[6] = ""
         speaker_x = random.randint(NAVBAR_WIDTH, WIDTH - speaker_image.get_width())
         speaker_y = random.randint(0, HEIGHT - speaker_image.get_height())
         elCursor_y = 505
         rCursor_x = 135
-        speakers[temp] = (speaker_x, speaker_y,elCursor_y,rCursor_x)
+        speakers[temp] = (speaker_x, speaker_y,elCursor_y,rCursor_x) 
         distance = hrtfParams(speaker_x,speaker_y)
         var.speaker_var[filename]=Variables(distance,selectedHrtf)
         play_thread, stop_event = play_wav_thread(filename)
@@ -97,7 +100,7 @@ def create_thread(filename):
     else:
         texts[6] = "File Doesn't Exists"
 
-# Function to terminate the earliest created thread
+# Function to terminate the created thread
 def terminate_thread(filename):
     global elCursor_y, rCursor_x
     temp = filename.strip()
@@ -108,20 +111,25 @@ def terminate_thread(filename):
         stop_event.set()  # Set the event to signal thread termination
         thread.join()  # Wait for the thread to finish
         stream = var.streams[filename]
-        stream.stop_stream()
+        stream.stop_stream() # Stop the audio stream
         elCursor_y = 505
         rCursor_x = 135
-        del var.streams[filename]
+        del var.streams[filename] # Delete the audio stream from streams
 
+# Create input field and input button to submit filename
 submit_input = Input(10,46,180,30,10,BORDER,LIGHT_BORDER,"",WHITE)
 submit_button = Button(55,190,90,30,10,BLUE,NAVY,"Submit",WHITE,create_thread,submit_input)
 
+# Create delete field and delete button to delete speaker
 delete_input = Input(10,321,180,30,10,BORDER,LIGHT_BORDER,"",WHITE)
 delete_button = Button(55,540,90,30,10,RED,MAROON,"Delete",WHITE,terminate_thread,delete_input)
 
+# Create Elevation Plot
 elPlot = Plot(30,385,4, 120,LIGHT_BORDER)
+# Create Plot for Radius of Head
 rPlot = Plot(52,445, 120, 4,LIGHT_BORDER)
 
+# Create circles for selecting HRTF options
 hrtfA = Circle(16,125,15,LIGHT_BORDER,BLUE,"1",WHITE)
 hrtfB = Circle(62,125,15,LIGHT_BORDER,BLUE,"2",WHITE)
 hrtfC = Circle(108,125,15,LIGHT_BORDER,BLUE,"3",WHITE)
@@ -137,7 +145,6 @@ colors = [TEXT, TEXT, TEXT,TEXT,TEXT,TEXT,RED]
 text_object = Text(texts, positions, font_sizes, colors)
 
 
-
 # game is running, dragging set to true when mouse button is down and selected a speaker
 
 speaker_index = ""
@@ -146,6 +153,9 @@ dragging = False
 rActive, elActive = False, False
 
 def hrtfClick(event,circle):
+    '''
+     Handles click event on HRTF circles. Returns the  newly selected HRTF.
+    '''
     global selectedHrtf
     temp = circle.click(event,selectedHrtf)
     if temp!=selectedHrtf:
@@ -185,6 +195,7 @@ while running:
 
             for speaker in speakers.items():
                 speaker_rect = pygame.Rect(speaker[1][0], speaker[1][1], speaker_image.get_width(), speaker_image.get_height())
+                 # Check if mouse is inside the speaker rectangle
                 if is_inside_rect(mouse_x, mouse_y, speaker_rect):
                 
                     delete_button.target.text = speaker[0]
@@ -198,9 +209,11 @@ while running:
             rCursorRect = pygame.Rect(rCursor_x, rCursor_y,10,10)
             elCursorRect = pygame.Rect(elCursor_x, elCursor_y,10,10)
 
+            # Check if mouse is inside rCursor rectangle and delete input text is not empty
             if is_inside_rect(mouse_x, mouse_y, rCursorRect) and len(delete_input.text):                 
                 rActive = True
-                
+            
+            # Check if mouse is inside elCursor rectangle and delete input text is not empty
             if is_inside_rect(mouse_x, mouse_y, elCursorRect) and len(delete_input.text): 
                 elActive = True       
                     
@@ -209,7 +222,7 @@ while running:
             dragging = False
             rActive, elActive = False, False
     
-    # update location if dragging
+    # Update azimuth,distance of speaker if dragging
     if dragging:
         mouse_x, mouse_y = pygame.mouse.get_pos()
         speaker_x = mouse_x - speaker_offset_x
@@ -219,9 +232,8 @@ while running:
         speakers[speaker_index] = (speaker_x, speaker_y,speakers[speaker_index][2],speakers[speaker_index][3])
         var.speaker_var[speaker_index].azimuth = np.arctan2(speaker_y-player_y, speaker_x-player_x)+np.pi/2
         var.speaker_var[speaker_index].distance  = hrtfParams(speaker_x, speaker_y)
-        # print("Elevation: ",var.speaker_var[speaker_index].elevation)
-        # # print("R: ",var.speaker_var[speaker_index].dist )
        
+    # Update Elevation and elCursor Position if elCursor is dragging
     if elActive:
         mouse_x, mouse_y = pygame.mouse.get_pos()
         elCursor_y = mouse_y
@@ -234,8 +246,8 @@ while running:
         speakers[speaker_index] = (speakers[speaker_index][0], speakers[speaker_index][1],elCursor_y,speakers[speaker_index][3])
         ele = (505-speakers[speaker_index][2])/120*140-50
         var.speaker_var[speaker_index].elevation = ele*np.pi/180
-        # print("Elevation: ",var.speaker_var[speaker_index].elevation) 
-      
+    
+    # Update radious of head and rCursor Position if rCursor is dragging
     if rActive:
         mouse_x, mouse_y = pygame.mouse.get_pos()
         rCursor_x = mouse_x
@@ -269,7 +281,8 @@ while running:
         if keys[pygame.K_DOWN]:
             player_y = min(HEIGHT - character_size//2, player_y + player_speed)
             animation_counter += 1
-            
+
+        # Update azimuth  and distance of each speaker if character is moving
         for speaker in speakers.items():
             speaker_index = speaker[0]
             speaker_x, speaker_y = speaker[1][0], speaker[1][1]
@@ -282,7 +295,7 @@ while running:
         s = speaker[0]
         var.speaker_var[s].speakerAzimuth= -var.speaker_var[s].azimuth
         var.speaker_var[s].speakerElevation = var.speaker_var[s].elevation
-        var.speaker_var[s].pr = var.speaker_var[s].dist
+        var.speaker_var[s].speakerDistance = var.speaker_var[s].dist
 
     # change image when counter exceeds delay
     if animation_counter >= animation_delay:
@@ -310,6 +323,7 @@ while running:
     for speaker in speakers.values():
         screen.blit(speaker_image, (speaker[0], speaker[1]))
     
+    # input fields and button render
     pygame.draw.rect(screen, GRAY, (0, 0, NAVBAR_WIDTH, HEIGHT))
     submit_button.draw(screen)
     delete_button.draw(screen)
@@ -319,12 +333,14 @@ while running:
     submit_button.hover()
     pygame.draw.rect(screen, BORDER, partition)
 
+    # elPlot and rPlot render
     elPlot.draw(screen)
     rPlot.draw(screen)
     
     screen.blit(elCursor,(elCursor_x,elCursor_y))
     screen.blit(rCursor,(rCursor_x,rCursor_y))
 
+    #Render HRTF selction buttons
     hrtfA.draw(screen)
     hrtfB.draw(screen)
     hrtfC.draw(screen)

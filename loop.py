@@ -20,6 +20,6 @@ def loop_wav(input_file, output_file, n):
 # Example usage
 input_file = 'sample/birds.wav'
 output_file = 'sample/birds1.wav'
-n = 10  # Number of times to loop the WAV file
+loop = 10  # Number of times to loop the WAV file
 
-loop_wav(input_file, output_file, n)
+loop_wav(input_file, output_file, loop)

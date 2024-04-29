@@ -12,26 +12,30 @@ p = pyaudio.PyAudio()
 CHUNK = 30000
 power = 5
 
-# Play wav file on loop
+# Function to play a WAV file with spatialized audio
 def play_wav(filename, stop_event):
     overlapLength = var.speaker_var[filename].hrtfData.shape[2]-1
     initialData = np.zeros(overlapLength)
     hrtfList = [[0,0]] 
     tIndex = 0
 
+    # Open WAV file
     wf = wave.open('sample/'+filename, 'rb')
     
+    # Callback function for audio stream
     def callback(in_data, frame_count, time_info, status):
         nonlocal initialData,tIndex,hrtfList
-
+        
+        # Calculate x, y, and z coordinates of the speaker relative to the listener
         xCoordinate = np.sin(var.speaker_var[filename].speakerAzimuth)*np.cos(var.speaker_var[filename].speakerElevation)*var.speaker_var[filename].speakerDistance
         yCoordinate= np.cos(var.speaker_var[filename].speakerAzimuth)*np.cos(var.speaker_var[filename].speakerElevation)*var.speaker_var[filename].speakerDistance
         zCoordinate = np.sin(var.speaker_var[filename].speakerElevation)*var.speaker_var[filename].speakerDistance
 
+        # Create a numpy array to store the speaker coordinates
         coordinates= np.array((xCoordinate, yCoordinate, zCoordinate))
         distance = var.speaker_var[filename].distance
         
-        print
+        # Setting intensity based on distance between speaker and character
         if distance <= 0.15:
             intensity = power / (4 * math.pi * distance**2)*0.5
        
@@ -50,7 +54,7 @@ def play_wav(filename, stop_event):
             tIndex = var.speaker_var[filename].delaunayTriangulation.neighbors[tIndex][barycentricCoordinates.index(min(barycentricCoordinates))]
             i+=1
 
-        # and get the HRTF associated with coordinates
+        # Find the HRTF values for the current speaker coordinates
         positionIndex = var.speaker_var[filename].delaunayTriangulation.simplices[tIndex]
         hrtfA = var.speaker_var[filename].hrtfData[positionIndex[0],:,:]
         hrtfB = var.speaker_var[filename].hrtfData[positionIndex[1],:,:]
@@ -59,17 +63,20 @@ def play_wav(filename, stop_event):
 
         hrtf = hrtfA*barycentricCoordinates[0]+hrtfB*barycentricCoordinates[1]+hrtfC*barycentricCoordinates[2]+hrtfD*barycentricCoordinates[3]
 
+        # Append new HRTFs to list if different from previous
         if not np.array_equal(hrtfList[-1][0], hrtf[0]):
             hrtfList.append(hrtf)
 
+        # Read audio data from WAV file
         data = wf.readframes(frame_count)
         data_int = np.frombuffer(data, dtype=np.int16)
         data_int = np.concatenate((initialData, data_int))
         initialData = data_int[-overlapLength:]
 
+        # Convolve audio data with HRTF to spatialize sound
         left_audio_data = scipy.signal.fftconvolve(data_int,hrtf[0])
         right_audio_data = scipy.signal.fftconvolve(data_int,hrtf[1])
-
+        # Apply intensity and convert to 16-bit integers
         if len(left_audio_data)>0:
             left_audio_data = left_audio_data[overlapLength:-overlapLength] *intensity
             left_audio_data = left_audio_data.astype(np.int16)
@@ -83,7 +90,8 @@ def play_wav(filename, stop_event):
         data = audioData[:CHUNK*2].tobytes()
             
         return (data, pyaudio.paContinue)
-
+    
+    # Open audio stream
     stream = p.open(
         format=p.get_format_from_width(wf.getsampwidth()),
         channels=2,#wf.getnchannels(),
@@ -95,9 +103,10 @@ def play_wav(filename, stop_event):
     
     var.streams[filename] = stream
     
+     # Start audio stream
     stream.start_stream()
 
-# Play on thread
+# Function to play WAV file on a separate thread
 def play_wav_thread(filename):
     stop_event = threading.Event()
     thread = threading.Thread(target=play_wav, args=(filename, stop_event))
