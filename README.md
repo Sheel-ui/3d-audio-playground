@@ -8,7 +8,7 @@
 6. [Optional Parameters](#6-optional-parameters)
 
 ## 1. 3D Audio Playground
-3D Audi Playground offers a user-friendly GUI interface that allows users to create and manipulate 3D soundscapes in a simulated environment. The tool's customizable features enable users to control the positioning of sound sources, select from various HRTFs, adjust sound properties like elevation and observe how audio behaves in real-time. 
+[3D Audio Playground](https://github.com/Sheel-ui/3d-audio-playground) offers a user-friendly GUI interface that allows users to create and manipulate 3D soundscapes in a simulated environment. The tool's customizable features enable users to control the positioning of sound sources, select from various HRTFs, adjust sound properties like elevation and observe how audio behaves in real-time. 
 
 ### Features
 
