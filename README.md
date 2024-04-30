@@ -56,8 +56,18 @@ Clone the repository to your local machine.
 ```bash
 $ git clone https://github.com/Sheel-ui/3d-audio-playground.git
 ```
+
+### Install PortAudio (Only for MacOs) 
+1. You need to have brew installed on your system to install portaudio. To install brew, follow official [documentation](https://docs.brew.sh/Installation) or refer this [link](https://stackoverflow.com/questions/66666134/how-to-install-homebrew-on-m1-mac).
+
+2. After installing brew, run below command.
+```bash
+$ brew install portaudio
+```
+
 ### Create Environment and Install Depedencies
-Create a new conda environment. Install the required dependencies by running the following commands:
+1. You need to have miniconda installed in your system. Follow offical [documentation](https://docs.anaconda.com/free/miniconda/miniconda-install/) to install miniconda.
+2. Create a new conda environment. Install the required dependencies by running the following commands:
 ```bash
 $ conda create -n <env_name> python=3.10.13
 $ conda activate <env_name>
@@ -146,7 +156,7 @@ If you have a very short audio file and you want to loop it multiple times, you 
 
 ### Adjusting CHUNK size
 
-If the sound quality is not as intended, try adjusting the chunk size of the code. You can adjust the chuck size by changing the **CHUNK** variable at *line 12* of **sound.py** file
+If the sound quality is not as intended, try adjusting the chunk size of the code. You can adjust the chuck size by changing the **CHUNK** variable at *line 12* of **sound.py** file. If the buffer size is too large, smooth movement may be hindered since each buffer is played at a specific azimuth/elevation/radius. Conversely, if the buffer size is too small, your computer may struggle to process the audio rapidly enough.
 
 ### Addding you own HRTF profile
 
